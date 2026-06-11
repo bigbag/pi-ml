@@ -1,3 +1,7 @@
+---
+description: Design an experiment sequence for an ML task or competition.
+---
+
 # Experiment Planning
 
 Use this skill when the user wants to design an experiment sequence for an ML task or competition.

@@ -1,3 +1,7 @@
+---
+description: Investigate ML research, papers, techniques, competitions, or constrained optimization problems.
+---
+
 # ML Research Investigator
 
 Use this skill when the user asks about machine learning research, papers, techniques, competitions, or constrained optimization problems.
