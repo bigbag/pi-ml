@@ -1,0 +1,57 @@
+{
+  "name": "pi-ml",
+  "version": "0.1.0",
+  "description": "ML research and competition tools for pi coding agent",
+  "type": "module",
+  "keywords": [
+    "pi-package",
+    "ml",
+    "machine-learning",
+    "kaggle",
+    "competition",
+    "pi-extension"
+  ],
+  "author": "",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/bigbag/pi-ml.git"
+  },
+  "exports": {
+    ".": {
+      "import": "./src/index.ts"
+    }
+  },
+  "files": [
+    "src",
+    "skills",
+    "prompts",
+    "README.md"
+  ],
+  "scripts": {
+    "check": "tsc --noEmit",
+    "lint": "echo 'No linter configured'",
+    "test": "vitest --run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest --run --coverage"
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-agent-core": "^0.79.0",
+    "@earendil-works/pi-ai": "^0.79.0",
+    "@earendil-works/pi-coding-agent": "^0.79.0",
+    "typebox": "^1.1.0"
+  },
+  "devDependencies": {
+    "@types/cross-spawn": "^6.0.6",
+    "@types/node": "^22.0.0",
+    "@vitest/coverage-v8": "^4.1.8",
+    "typescript": "^5.9.0",
+    "vitest": "^4.1.8"
+  },
+  "dependencies": {
+    "cross-spawn": "7.0.6",
+    "glob": "13.0.6",
+    "ignore": "7.0.5",
+    "yaml": "2.9.0"
+  }
+}
