@@ -45,7 +45,7 @@ export function registerArtifactTools(pi: ExtensionAPI, getState: (ctx: any) => 
       const state = getState(ctx);
       const art = await state.artifactRegistry.get(params.artifactId);
       if (!art) throw new Error(`Artifact not found: ${params.artifactId}`);
-      const content = await fs.readFile(art.path, "utf-8").catch(() => "(binary or unreadable)");
+      const content = await state.artifactRegistry.read(art.id).then((b) => b.toString("utf-8")).catch(() => "(binary or unreadable)");
       return {
         content: [{ type: "text", text: `Artifact: ${art.name} [${art.type}]\n${content.slice(0, 10000)}` }],
         details: { artifact: art },
@@ -66,8 +66,8 @@ export function registerArtifactTools(pi: ExtensionAPI, getState: (ctx: any) => 
       const a = await state.artifactRegistry.get(params.artifactIdA);
       const b = await state.artifactRegistry.get(params.artifactIdB);
       if (!a || !b) throw new Error("One or both artifacts not found");
-      const contentA = await fs.readFile(a.path, "utf-8").catch(() => "(binary)");
-      const contentB = await fs.readFile(b.path, "utf-8").catch(() => "(binary)");
+      const contentA = await state.artifactRegistry.read(a.id).then((b) => b.toString("utf-8")).catch(() => "(binary)");
+      const contentB = await state.artifactRegistry.read(b.id).then((b) => b.toString("utf-8")).catch(() => "(binary)");
       const linesA = contentA.split("\n");
       const linesB = contentB.split("\n");
       const maxLen = Math.max(linesA.length, linesB.length);

@@ -35,9 +35,10 @@ export class ExperimentStore {
   async create(partial: Partial<ExperimentRecord> & Pick<ExperimentRecord, "id">): Promise<ExperimentRecord> {
     const record: ExperimentRecord = {
       name: partial.name ?? partial.id,
+      hypothesis: partial.hypothesis ?? "",
       hyperparameters: partial.hyperparameters ?? {},
-      codeArtifactId: partial.codeArtifactId,
-      configArtifactId: partial.configArtifactId,
+      codeArtifactId: partial.codeArtifactId ?? "",
+      configArtifactId: partial.configArtifactId ?? "",
       id: partial.id,
       createdAt: Date.now(),
       status: partial.status ?? "planned",

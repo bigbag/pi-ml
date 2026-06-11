@@ -49,12 +49,12 @@ export function registerSearchTools(pi: ExtensionAPI, getState: (ctx: any) => Se
       if (params.artifactId) {
         const art = await state.artifactRegistry.get(params.artifactId);
         if (!art) throw new Error(`Artifact not found: ${params.artifactId}`);
-        logContent = await fs.readFile(art.path, "utf-8");
+        logContent = await state.artifactRegistry.read(art.id).then((b) => b.toString("utf-8"));
       } else {
         const arts = await state.artifactRegistry.list(params.experimentId);
         const logArt = arts.find((a) => a.type === "log");
         if (!logArt) throw new Error("No log artifact found for this experiment");
-        logContent = await fs.readFile(logArt.path, "utf-8");
+        logContent = await state.artifactRegistry.read(logArt.id).then((b) => b.toString("utf-8"));
       }
 
       const lines = logContent.split("\n");

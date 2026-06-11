@@ -5,7 +5,6 @@
  * Uses pi-tui components for consistent theming with the rest of pi.
  */
 
-import { Text } from "@earendil-works/pi-tui";
 import type { Theme } from "@earendil-works/pi-coding-agent";
 
 export function renderExperimentStatus(status: string, theme: Theme): string {

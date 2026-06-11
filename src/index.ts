@@ -63,8 +63,8 @@ export default async function (pi: ExtensionAPI) {
       const lines = exps
         .filter((e) => e.results)
         .sort((a, b) => {
-          const aVal = a.results?.val_loss ?? a.results?.loss ?? Infinity;
-          const bVal = b.results?.val_loss ?? b.results?.loss ?? Infinity;
+          const aVal = Number(a.results?.val_loss ?? a.results?.loss ?? Infinity);
+          const bVal = Number(b.results?.val_loss ?? b.results?.loss ?? Infinity);
           return aVal - bVal;
         })
         .map((e) => `${e.id}: ${e.name} | status=${e.status} | results=${JSON.stringify(e.results)}`);
