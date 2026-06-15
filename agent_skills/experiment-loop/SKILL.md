@@ -1,5 +1,7 @@
 ---
-description: Run autonomous ML experiment loops — assess task, research techniques, plan ranked experiments with cost estimates, execute with artifact tracking, analyze results, and iterate toward a target metric.
+name: experiment-loop
+description: Use when running ML experiment loops — assess task constraints, research techniques, plan ranked experiments with cost estimates, execute with artifact tracking, analyze results, and iterate toward a target metric. Triggers on any ML optimization task involving iterating toward a goal.
+version: "1.0"
 ---
 
 # ML Experiment Loop
@@ -13,13 +15,13 @@ description: Run autonomous ML experiment loops — assess task, research techni
 | Trigger | Action |
 |---------|--------|
 | Starting experiment session | → Phase 0: Assess |
-| Ready to research techniques | → Phase 1: Research (use `ml_search`, `search_implementations`, `search_benchmarks`) |
-| Research done, ordering experiments | → Phase 2: Plan |
-| Plan approved, time to run | → Phase 3: Execute (use `experiment_run`, `log_analyze`) |
+| Have a plan, ready to research | → Phase 1: Research |
+| Research done, need to order experiments | → Phase 2: Plan |
+| Plan approved, time to run | → Phase 3: Execute |
 | Run crashed / NaN loss | → `references/01-thinking-triggers.md`: scientific method |
-| Results in, what now? | → Phase 4: Analyze (use `experiment_diff`) |
-| Budget constrained | → `references/03-experiment-economics.md` |
-| Need to verify what helped | → `references/04-ablation-methodology.md` |
+| Results in, what now? | → Phase 4: Analyze |
+| Budget constrained, need efficiency | → `references/03-experiment-economics.md` |
+| Need to verify what actually helped | → `references/04-ablation-methodology.md` |
 | Metric delta questionable | → `references/01-thinking-triggers.md`: margin of safety |
 | Need artifact templates | → `references/02-phase-templates.md` |
 
@@ -51,8 +53,8 @@ Phase 0: Assess → Phase 1: Research → Phase 2: Plan → [HUMAN GATE] → Pha
 - [ ] Catalog dead ends: what's been tried and failed (from experiment logs, docs, git history)
 - [ ] Catalog working techniques: what's proven to help
 - [ ] Identify training command: how to launch a run, what env vars control hyperparameters
-- [ ] Use `experiment_track action=create` to register the baseline experiment
-- [ ] Use `dataset_profile` to analyze the training data
+- [ ] Profile the dataset: column types, distributions, target analysis, correlations
+- [ ] Record the baseline experiment in a tracking file/system
 
 ### Session Naming
 
@@ -77,6 +79,8 @@ WORKING TECHNIQUES (top 5):
 - <technique>: <result>
 ```
 
+Do NOT proceed until user confirms.
+
 ---
 
 ## Phase 1: Research
@@ -85,13 +89,14 @@ WORKING TECHNIQUES (top 5):
 
 ### Checklist
 
-- [ ] **ML search** (3-5 queries): use `ml_search` with task-specific queries
-- [ ] **Implementation search**: use `search_implementations` for techniques that look promising
-- [ ] **Benchmark lookup**: use `search_benchmarks` to find SOTA on relevant datasets
-- [ ] **Paper deep-dive**: use `search_paper` on the most relevant papers found
+- [ ] **Web search** (3-5 queries): search for techniques relevant to task constraints
+- [ ] **ArXiv / paper search** (2-3 queries): recent papers on relevant techniques
+- [ ] **Code search**: find GitHub repos implementing promising techniques (filter by stars, framework)
+- [ ] **Benchmark lookup**: find SOTA on relevant datasets via PapersWithCode
+- [ ] **Paper deep-dive**: read abstracts/methods of most relevant papers
 - [ ] **Cross-reference with dead ends**: filter out anything already tried
 - [ ] **Rank candidates** by expected value: (impact × probability) / implementation_effort
-  > **→ ml-thinking: Expected value trigger.** The highest-EV technique wins, not the most novel. A 60% chance of +0.01 for $5 beats a 10% chance of +0.05 for $50.
+  > **→ ml-thinking: Expected value trigger.** The highest-EV technique wins, not the most novel.
 
 ### Research Query Design
 
@@ -153,18 +158,19 @@ Approve? [approve / reorder / drop / add]
 
 For each experiment in plan order:
 
-- [ ] `experiment_track action=create` — register the experiment
-- [ ] `code_snapshot` — save current code state
+- [ ] Create experiment directory: `experiments/<session>/<experiment_id>/`
+- [ ] Save config.json: all parameters, hypothesis, expected outcome
+- [ ] Save code snapshot: copy or git diff of current training script
 - [ ] Apply config changes (env vars or code modifications)
 - [ ] **Screening gate** (if applicable): run cheap pass first, skip full run if clearly worse
-- [ ] `experiment_run` — execute training command
+- [ ] Execute training command
 - [ ] Monitor: watch for completion or early failure (OOM, compile error)
 - [ ] **On crash**: save partial log, mark `status=crashed`, ask user: retry/skip
   > **→ ml-thinking: Scientific method trigger.** If crash cause is unclear: enumerate hypotheses (OOM, data issue, code bug, infra), test cheapest observation first.
 - [ ] **On completion**:
-  - `log_analyze` — extract metrics
-  - `experiment_track action=update` — record results and status
-  - `code_snapshot` — save final state
+  - Extract metrics from training log (grep for metric patterns)
+  - Save results.json with metric, timing, cost, status
+  - Write notes.md with observations
 - [ ] **Git decision**: code modified + improved → commit; not improved → revert
 - [ ] **Abort check**: count consecutive failures, stop if threshold reached
 - [ ] Print progress table
@@ -188,10 +194,10 @@ Budget spent: $<X> of $<Y>
 ### Checklist
 
 - [ ] Results table: all experiments sorted by metric (best first)
-- [ ] `experiment_diff` — compare top 2-3 experiments to identify what drove improvements
-  > **→ ml-thinking: Margin of safety trigger.** Are metric deltas larger than noise floor? Use stats module's `binomialExactTwoSided` for significance.
+- [ ] Compare top 2-3 experiments: diff configs to identify what drove improvements
+  > **→ ml-thinking: Margin of safety trigger.** Are metric deltas larger than noise floor? Is this statistically significant?
 - [ ] Trend analysis: which directions showed promise? What consistently fails?
-- [ ] Update dead ends and working techniques in experiment metadata
+- [ ] Update dead ends and working techniques
 - [ ] Update baseline to best result from this batch
 - [ ] **Assessment**:
   - Target reached → done
@@ -224,8 +230,27 @@ On **Loop**, return to Phase 1 with updated context. On **Stop**, session is com
 4. **ALWAYS save logs** even from crashed runs.
 5. **Crashed runs do NOT count toward abort criteria.** Only completed-but-not-improved counts.
 6. **One session per invocation.** Don't mix experiments from different sessions.
-7. **Infrastructure-agnostic.** Never assume specific hardware. Use whatever the training command requires.
-8. **Metric-agnostic.** Never hardcode any specific metric name. Use what the task defines.
+7. **Infrastructure-agnostic.** Never assume specific hardware.
+8. **Metric-agnostic.** Never hardcode any specific metric name.
+
+---
+
+## Artifact Structure
+
+```
+experiments/
+  <session>/
+    task_analysis.json     # Phase 0 output
+    research_findings.md   # Phase 1 output
+    experiment_plan.md     # Phase 2 output
+    <experiment_id>/
+      config.json          # Pre-run parameters
+      train.py             # Code snapshot
+      train.log            # Training output
+      results.json         # Post-run metrics
+      notes.md             # Observations
+    summary.md             # Phase 4 output
+```
 
 ## Hand-off
 

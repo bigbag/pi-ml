@@ -6,6 +6,10 @@ import { LocalRunner } from "./core/local-runner.js";
 import { DeepSearch } from "./search/deep-search.js";
 import { ArxivSource } from "./search/sources/arxiv-source.js";
 import { WebSource } from "./search/sources/web-source.js";
+import { PwcSource } from "./search/sources/pwc-source.js";
+import { SemanticScholarSource } from "./search/sources/semantic-scholar-source.js";
+import { GithubSource } from "./search/sources/github-source.js";
+import { HuggingFaceSource } from "./search/sources/huggingface-source.js";
 import type { SessionState, MlExtensionSettings } from "./types.js";
 import { loadSettings } from "./settings.js";
 import { registerExperimentTools } from "./tools/experiment-tools.js";
@@ -15,19 +19,33 @@ import { registerCodeTools } from "./tools/code-tools.js";
 import { registerPipelineTools } from "./tools/ml-pipeline-tools.js";
 
 const sessionStates = new Map<string, SessionState>();
+let currentSettings: MlExtensionSettings = {};
 
 function getState(ctx: any): SessionState {
   const sessionId = ctx.sessionManager.getSessionId();
   let state = sessionStates.get(sessionId);
   if (!state) {
     const cwd = ctx.cwd;
+    const cacheDir = path.join(cwd, ".ml-agent", "search-cache");
+    const cacheTtlMs = currentSettings.searchCacheTtlHours
+      ? currentSettings.searchCacheTtlHours * 60 * 60 * 1000
+      : undefined;
+
     state = {
       artifactRegistry: new ArtifactRegistry(path.join(cwd, ".ml-agent")),
       experimentStore: new ExperimentStore(path.join(cwd, ".ml-agent", "experiments.jsonl")),
       runner: new LocalRunner(),
       deepSearch: new DeepSearch(
-        [new ArxivSource(), new WebSource()],
-        path.join(cwd, ".ml-agent", "search-cache"),
+        [
+          new ArxivSource(),
+          new SemanticScholarSource(currentSettings.semanticScholarApiKey),
+          new PwcSource(),
+          new GithubSource(currentSettings.githubToken),
+          new HuggingFaceSource(),
+          new WebSource(currentSettings.searxngUrl),
+        ],
+        cacheDir,
+        cacheTtlMs,
       ),
     };
     sessionStates.set(sessionId, state);
@@ -36,25 +54,21 @@ function getState(ctx: any): SessionState {
 }
 
 export default async function (pi: ExtensionAPI) {
-  const settings: MlExtensionSettings = {};
-
   pi.on("session_start", async (_event, ctx) => {
     try {
       const loaded = await loadSettings(ctx.cwd);
-      Object.assign(settings, loaded);
+      Object.assign(currentSettings, loaded);
     } catch {
       // ignore
     }
   });
 
-  // Register all ML tools
   registerExperimentTools(pi, getState);
   registerArtifactTools(pi, getState);
   registerSearchTools(pi, getState);
   registerCodeTools(pi, getState);
   registerPipelineTools(pi, getState);
 
-  // Command: /ml-leaderboard
   pi.registerCommand("ml-leaderboard", {
     description: "Show experiment leaderboard sorted by best metric",
     handler: async (_args, ctx) => {
@@ -68,11 +82,10 @@ export default async function (pi: ExtensionAPI) {
           return aVal - bVal;
         })
         .map((e) => `${e.id}: ${e.name} | status=${e.status} | results=${JSON.stringify(e.results)}`);
-      ctx.ui.notify(lines.slice(0, settings.maxExperimentsInLeaderboard ?? 20).join("\n") || "No experiments with results.", "info");
+      ctx.ui.notify(lines.slice(0, currentSettings.maxExperimentsInLeaderboard ?? 20).join("\n") || "No experiments with results.", "info");
     },
   });
 
-  // Cleanup on session end
   pi.on("session_shutdown", async (_event, ctx) => {
     const sessionId = ctx.sessionManager.getSessionId();
     sessionStates.delete(sessionId);

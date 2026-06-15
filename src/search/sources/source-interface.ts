@@ -1,6 +1,7 @@
-import type { SearchResult, SearchOptions } from "../search-types.js";
+import type { SearchResult, EnrichedSearchResult, SearchOptions } from "../search-types.js";
 
 export interface SearchSource {
   name: string;
   search(query: string, options?: SearchOptions): Promise<SearchResult[]>;
+  fetchDetails?(id: string): Promise<EnrichedSearchResult | null>;
 }

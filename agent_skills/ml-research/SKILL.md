@@ -1,5 +1,7 @@
 ---
-description: Investigate ML research, papers, techniques, competitions, or constrained optimization problems. Use when analyzing challenges, improving model performance under constraints, designing experiment plans, or reviewing training logs.
+name: ml-research
+description: Use when analyzing ML competitions/challenges, improving model performance under constraints (size, compute, time), designing experiment plans, researching SOTA techniques, reviewing training logs, or user asks "how can I improve my model/score/metric".
+version: "1.0"
 ---
 
 # ML Research Investigator
@@ -13,37 +15,39 @@ When facing an ML optimization problem: **decompose constraints → research tec
 | Trigger | Action |
 |---------|--------|
 | Starting a new ML task/competition | → Phase 1: Problem Decomposition |
-| Need technique ideas | → Phase 2 + `references/01-source-discovery.md` |
-| Training fails, loss NaN/stuck | → `references/03-ml-debugging.md` |
+| Need technique ideas | → Phase 2: Technique Research + `references/01-source-discovery.md` |
+| Training fails, loss is NaN/stuck | → `references/03-ml-debugging.md` + thinking: scientific method |
 | Results vary run-to-run | → `references/04-reproducibility.md` |
 | Kaggle-specific workflow | → `references/05-kaggle-patterns.md` |
 | Combining multiple techniques | → `references/06-technique-interactions.md` |
 | Multiple competing constraints | → `references/07-constraint-pareto.md` |
+| Designing experiment sequence | → Phase 3: Experiment Plan |
 | About to commit $$ to a plan | → `references/08-ml-decision-frameworks.md`: pre-mortem |
-| Training slow, not sure what to optimize | → `references/08-ml-decision-frameworks.md`: theory of constraints |
+| Training is slow, not sure what to optimize | → `references/08-ml-decision-frameworks.md`: theory of constraints |
+| Spending too long on one approach | → `references/08-ml-decision-frameworks.md`: opportunity cost |
+| Reviewing training logs | → Phase 4: Log Analysis |
+| Results don't match expectations | → thinking: inversion trigger |
 
 ## When to Use
 
-- User shares a competition/challenge and wants to understand the optimization surface
-- User asks how to improve a model under constraints (size, compute, latency, memory)
-- User wants to analyze training logs and figure out what to try next
-- User needs a prioritized experiment plan for a constrained ML task
-- User asks "how can I improve my model/score/metric"
+- Analyzing ML competitions, challenges, or constrained optimization problems
+- Improving model performance under constraints (size, compute, latency, memory)
+- Analyzing training logs and figuring out what to try next
+- Designing a prioritized experiment plan for a constrained ML task
 
 ## When NOT to Use
 
-- Pure software engineering task with no ML optimization component
-- User just wants to run an existing training script without changes
-- Data collection/labeling tasks (no model optimization involved)
+- Pure software engineering with no ML optimization
+- Running an existing training script without changes
+- Data collection/labeling tasks
 
 ## Core Workflow
 
 ### Phase 1: Problem Decomposition
 
-Before suggesting anything, fully understand the problem. Use `dataset_profile` to analyze data, read available materials, and extract.
+Before suggesting anything, fully understand the problem. Read all available materials and extract:
 
 > **→ ml-thinking: First principles trigger.** For each constraint, ask: is this physics or convention? Constraints that look fixed may be negotiable.
-
 
 **Constraints** — the hard walls:
 - Model size budget (parameters, compressed bytes, artifact size)
@@ -71,18 +75,17 @@ Before suggesting anything, fully understand the problem. Use `dataset_profile` 
 
 ### Phase 2: Technique Research
 
-Search aggressively using the available tools:
+Search aggressively using available tools:
 
-```
-ml_search query="<technique> <constraint regime>" sources=["pwc","semantic-scholar","arxiv"]
-search_implementations technique="<name>" framework="pytorch" minStars=50
-search_benchmarks dataset="<name>" task="<task>"
-```
-
-For each technique found, evaluate:
+- **ArXiv / Semantic Scholar** — recent papers on the specific constraint regime
+- **PapersWithCode** — benchmarks, leaderboards, linked code repos
+- **GitHub** — implementations of promising techniques (filter by stars, framework)
+- **HuggingFace** — pre-trained models and datasets relevant to the task
+- **Web search** — blog posts, competition write-ups, discussion threads
 
 > **→ ml-thinking: Expected value trigger.** Rank by (expected_improvement × probability) / cost. The highest-EV technique wins, not the most novel.
 
+For each technique found, evaluate:
 1. **Expected impact** — how many nats/bits/points could this realistically gain?
 2. **Implementation complexity** — hours of work vs quick wins
 3. **Interaction effects** — composes well with existing techniques or conflicts?
@@ -117,7 +120,7 @@ For each experiment:
 
 ### Phase 4: Log Analysis
 
-When reviewing training logs (use `log_analyze`):
+When reviewing training logs:
 
 1. **Extract key metrics**: final loss/BPB, training curve shape, artifact size, wall-clock time
 2. **Compare to expectations**: did the experiment hit its predicted gain? If not, why?
@@ -134,17 +137,17 @@ Be specific. "Loss is still decreasing" is useless. "val_bpb dropped 0.003 in th
 
 **Respect the constraint surface.** A technique that improves loss by 0.02 but adds 2MB is worthless if you're at 15.5MB of a 16MB limit.
 
-**Leaderboard archaeology is high-ROI.** Before inventing anything, analyze what existing top entries did. The progression from baseline to SOTA tells you which techniques had biggest marginal impact.
+**Leaderboard archaeology is high-ROI.** Before inventing anything, analyze what existing top entries did.
 
-**Diminishing returns are real.** The first technique in a category gives biggest gain. The fifth variant is usually noise. Know when to move to a different axis.
+**Diminishing returns are real.** The first technique in a category gives biggest gain. The fifth variant is usually noise.
 
-**Interactions matter more than isolated effects.** QAT + pruning + distillation don't add up. Some combinations are synergistic, others destructive. Flag expected interactions.
+**Interactions matter more than isolated effects.** QAT + pruning + distillation don't add up. Flag expected synergies and conflicts.
 
 **The eval strategy IS part of the model.** Test-time training, sliding window, context length tricks can be as impactful as architecture changes.
 
 ## Output Format
 
-- **Challenge analysis** → Full Phase 1 decomposition + Phase 2 top techniques + Phase 3 experiment plan
+- **Challenge analysis** → Full Phase 1 + Phase 2 top techniques + Phase 3 experiment plan
 - **"What should I try next?"** → Phase 4 log analysis + updated top-3 experiments
 - **Specific technique question** → Deep dive with evidence, expected impact, implementation notes
 - **Training log review** → Phase 4 analysis with specific actionable recommendations
@@ -153,4 +156,4 @@ Always end with a clear **"Next step"** — the single highest-value action to t
 
 ## Hand-off
 
-Delivers a ranked experiment plan with quantitative estimates. The `experiment-planning` skill takes this plan and executes it with artifact tracking, human gates, and session management using pi-ml tools (`experiment_track`, `experiment_run`, `log_analyze`).
+Delivers a ranked experiment plan with quantitative estimates. The `experiment-loop` skill takes this plan and executes it with artifact tracking, human gates, and session management.
