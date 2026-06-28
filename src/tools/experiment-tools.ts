@@ -2,7 +2,7 @@ import { Type } from "typebox";
 import * as path from "node:path";
 import * as fs from "node:fs/promises";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
-import type { SessionState } from "../types.js";
+import type { SessionState } from "../types/settings.js";
 
 export function registerExperimentTools(pi: ExtensionAPI, getState: (ctx: any) => SessionState) {
   pi.registerTool({

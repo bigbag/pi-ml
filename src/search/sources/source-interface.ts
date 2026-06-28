@@ -1,4 +1,4 @@
-import type { SearchResult, EnrichedSearchResult, SearchOptions } from "../search-types.js";
+import type { SearchResult, EnrichedSearchResult, SearchOptions } from "../../types/search.js";
 
 export interface SearchSource {
   name: string;

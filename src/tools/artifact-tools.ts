@@ -1,7 +1,7 @@
 import { Type } from "typebox";
 import * as fs from "node:fs/promises";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
-import type { SessionState } from "../types.js";
+import type { SessionState } from "../types/settings.js";
 
 export function registerArtifactTools(pi: ExtensionAPI, getState: (ctx: any) => SessionState) {
   pi.registerTool({

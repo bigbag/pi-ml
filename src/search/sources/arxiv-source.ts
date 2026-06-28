@@ -1,5 +1,5 @@
 import type { SearchSource } from "./source-interface.js";
-import type { SearchResult, SearchOptions } from "../search-types.js";
+import type { SearchResult, SearchOptions } from "../../types/search.js";
 
 export class ArxivSource implements SearchSource {
   name = "arxiv";

@@ -1,4 +1,4 @@
-import type { SearchResult, EnrichedSearchResult, SearchContext } from "./search-types.js";
+import type { SearchResult, EnrichedSearchResult, SearchContext } from "../types/search.js";
 
 function isEnriched(result: SearchResult): result is EnrichedSearchResult {
   return "resultType" in result;

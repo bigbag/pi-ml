@@ -1,5 +1,5 @@
 import type { SearchSource } from "./source-interface.js";
-import type { SearchResult, EnrichedSearchResult, SearchOptions } from "../search-types.js";
+import type { SearchResult, EnrichedSearchResult, SearchOptions } from "../../types/search.js";
 
 const BASE_URL = "https://api.semanticscholar.org/graph/v1";
 

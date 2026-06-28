@@ -2,13 +2,13 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import * as os from "node:os";
-import { ArtifactRegistry } from "../../src/core/artifact-registry.js";
-import { ExperimentStore } from "../../src/core/experiment-store.js";
-import { LocalRunner } from "../../src/core/local-runner.js";
+import { ArtifactRegistry } from "../../src/store/artifact-registry.js";
+import { ExperimentStore } from "../../src/store/experiment-store.js";
+import { LocalRunner } from "../../src/runner/local-runner.js";
 import { DeepSearch } from "../../src/search/deep-search.js";
 import { ArxivSource } from "../../src/search/sources/arxiv-source.js";
 import { WebSource } from "../../src/search/sources/web-source.js";
-import type { SessionState } from "../../src/types.js";
+import type { SessionState } from "../../src/types/settings.js";
 
 describe("Experiment Tools Integration", () => {
   let tmpDir: string;

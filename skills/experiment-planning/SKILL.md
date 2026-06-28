@@ -29,6 +29,21 @@ description: Run autonomous ML experiment loops — assess task, research techni
 - A measurable metric extractable from training output (loss, BPB, accuracy, F1, etc.)
 - A way to run training (local GPU, cloud API, remote pod — anything)
 
+## Investigation Integration
+
+This skill works within the investigation model. Before starting:
+
+1. Check for an active investigation: `investigation_status`
+2. If none exists, create one: `investigation_create`
+3. Use `hypothesis_add` to record each experiment hypothesis
+4. After experiments, update hypotheses: `hypothesis_update`
+5. Record findings: `finding_record`
+
+Execution can follow three patterns:
+- **Manual**: human picks each experiment step-by-step
+- **Guided**: agent proposes experiments, human approves each
+- **Auto-loop** (`/ml-loop`): agent cycles autonomously with budget constraints
+
 ## Quick Start
 
 ```
@@ -230,3 +245,7 @@ On **Loop**, return to Phase 1 with updated context. On **Stop**, session is com
 ## Hand-off
 
 Receives a ranked experiment plan from `ml-research`. Produces a session summary with best results, updated dead ends, working techniques, and a recommendation (loop/stop). On loop, hands back to `ml-research` Phase 2 with updated context.
+
+When stopping, update the investigation:
+- `investigation_pause` if work may resume later
+- `investigation_close` if the goal is met or abandoned

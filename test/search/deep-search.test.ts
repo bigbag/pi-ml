@@ -3,7 +3,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import * as os from "node:os";
 import { DeepSearch } from "../../src/search/deep-search.js";
-import type { SearchSource, SearchResult } from "../../src/search/search-types.js";
+import type { SearchSource, SearchResult } from "../../src/types/search.js";
 
 class MockSource implements SearchSource {
   name = "mock";

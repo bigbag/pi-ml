@@ -1,13 +1,13 @@
 import { Type } from "typebox";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
-import type { SessionState } from "../types.js";
-import type { EnrichedSearchResult } from "../search/search-types.js";
+import type { SessionState } from "../types/settings.js";
+import type { EnrichedSearchResult } from "../types/search.js";
 
 function isEnriched(r: unknown): r is EnrichedSearchResult {
   return typeof r === "object" && r !== null && "resultType" in r;
 }
 
-function formatResults(results: Array<import("../search/search-types.js").SearchResult>): string {
+function formatResults(results: Array<import("../types/search.js").SearchResult>): string {
   if (results.length === 0) return "No results found.";
 
   const papers = results.filter((r) => isEnriched(r) && r.resultType === "paper");

@@ -1,6 +1,6 @@
 import * as crypto from "node:crypto";
 import type { SearchSource } from "./sources/source-interface.js";
-import type { SearchResult, EnrichedSearchResult, SearchOptions, SearchContext } from "./search-types.js";
+import type { SearchResult, EnrichedSearchResult, SearchOptions, SearchContext } from "../types/search.js";
 import { SearchCache } from "./search-cache.js";
 import { scoreResults } from "./result-scorer.js";
 

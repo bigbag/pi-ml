@@ -38,6 +38,18 @@ When facing an ML optimization problem: **decompose constraints → research tec
 
 ## Core Workflow
 
+### Phase 0: Check Prior Knowledge
+
+Before researching from scratch, check what you already know:
+
+```
+knowledge_search problemType="<type>" category="<relevant-category>"
+journal_query type="experiments" filter={"config": {"model": "<similar-model>"}}
+journal_query type="findings" filter={"tags": ["<relevant-tag>"]}
+```
+
+Past investigations, experiments, and learnings can shortcut the research phase. If you've solved a similar problem before, start from what worked.
+
 ### Phase 1: Problem Decomposition
 
 Before suggesting anything, fully understand the problem. Use `dataset_profile` to analyze data, read available materials, and extract.
@@ -150,6 +162,20 @@ Be specific. "Loss is still decreasing" is useless. "val_bpb dropped 0.003 in th
 - **Training log review** → Phase 4 analysis with specific actionable recommendations
 
 Always end with a clear **"Next step"** — the single highest-value action to take right now.
+
+### Record Findings
+
+After completing research, record key findings for future reference:
+
+```
+finding_record type="insight" text="<key finding>" tags=["research", "<topic>"] sourceExperiments=[]
+```
+
+If a research finding is broadly applicable (not just to this investigation), save it as a learning:
+
+```
+learning_save text="<generalized insight>" evidence=[] tags=["<category>", "<topic>"]
+```
 
 ## Hand-off
 

@@ -1,7 +1,7 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import * as crypto from "node:crypto";
-import type { SearchResult } from "./search-types.js";
+import type { SearchResult } from "../types/search.js";
 
 function hashKey(queryHash: string, source: string): string {
   return crypto.createHash("sha256").update(`${queryHash}:${source}`).digest("hex").slice(0, 16);

@@ -2,9 +2,9 @@ import { Type } from "typebox";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
-import type { SessionState } from "../types.js";
-import { profileDataset, parseCSV } from "../core/dataset-profiler.js";
-import { generateFolds } from "../core/cv-splitter.js";
+import type { SessionState } from "../types/settings.js";
+import { profileDataset, parseCSV } from "../profiler/dataset-profiler.js";
+import { generateFolds } from "../cv/cv-splitter.js";
 
 export function registerPipelineTools(pi: ExtensionAPI, getState: (ctx: any) => SessionState) {
   pi.registerTool({

@@ -1,6 +1,6 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import type { MlExtensionSettings } from "./types.js";
+import type { MlExtensionSettings } from "./types/settings.js";
 
 const SETTINGS_FILE = "pi-ml.json";
 

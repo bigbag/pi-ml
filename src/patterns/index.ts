@@ -1,0 +1,8 @@
+export { AutoLoopPattern } from "./auto-loop.js"
+export type { AutoLoopConfig, AutoLoopState } from "./auto-loop.js"
+export { GuidedPattern } from "./guided.js"
+export { ManualPattern } from "./manual.js"
+export { DoomLoopDetector } from "./doom-loop.js"
+export type { ToolCall } from "./doom-loop.js"
+export { GateChecker } from "./gates.js"
+export type { GateThresholds, GateAction } from "./gates.js"

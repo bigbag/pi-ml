@@ -22,6 +22,9 @@
       "import": "./src/index.ts"
     }
   },
+  "pi": {
+    "extensions": ["./src/index.ts"]
+  },
   "files": [
     "src",
     "skills",
