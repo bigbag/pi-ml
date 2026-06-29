@@ -3,6 +3,12 @@ import type { InvestigationManager } from "../investigation/manager.js"
 import type { Journal } from "../memory/journal.js"
 import { generateBriefing } from "../investigation/briefing.js"
 
+export function tryAppendUserMessage(ctx: unknown, msg: string) {
+  if (typeof (ctx as any).appendUserMessage === "function") {
+    (ctx as any).appendUserMessage(msg)
+  }
+}
+
 export function registerMlAgentCommand(
   pi: ExtensionAPI,
   getManager: (ctx: any) => InvestigationManager,
@@ -24,14 +30,16 @@ export function registerMlAgentCommand(
         const list = paused
           .map(i => `- ${i.id}: ${i.goal} (paused ${i.lastActivity})`)
           .join("\n")
-        ctx.ui.notify(
-          `No active investigation.\n\nPaused investigations:\n${list}\n\nUse investigation_resume to continue one, or investigation_create to start new.`,
-          "info",
+        ctx.ui.notify(`Paused investigations:\n${list}`, "info")
+        tryAppendUserMessage(ctx,
+          `I have ${paused.length} paused investigation(s):\n${list}\n\n` +
+          "Ask me which one to resume, or if I want to start a new one.",
         )
       } else {
-        ctx.ui.notify(
-          "No investigations found. Use investigation_create to start one.",
-          "info",
+        ctx.ui.notify("Welcome to ML Agent. Let's start your first investigation.", "info")
+        tryAppendUserMessage(ctx,
+          "No investigations exist yet. Ask me what ML problem I want to solve, what dataset I'm working with, " +
+          "and what constraints I have. Then create an investigation with investigation_create and help me form initial hypotheses.",
         )
       }
     },

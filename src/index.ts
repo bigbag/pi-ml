@@ -114,6 +114,57 @@ export default async function (pi: ExtensionAPI) {
     }
   });
 
+  pi.on("before_agent_start", async (event, ctx) => {
+    let contextBlock = "";
+    try {
+      const modules = getModules(ctx);
+      const investigations = await modules.manager.list();
+      const active = investigations.find(i => i.status === "active");
+
+      if (active) {
+        const inv = await modules.manager.load(active.id);
+        const bestStr = inv.currentBest
+          ? `Current best: ${inv.currentBest.metric}=${inv.currentBest.value} (${inv.currentBest.experimentId})`
+          : "No results yet";
+        const pendingHyps = inv.hypotheses.filter(h => h.status === "pending").length;
+        contextBlock = `\n\n## Active Investigation\n- **Goal:** ${inv.goal}\n- **${bestStr}**\n- **Pending hypotheses:** ${pendingHyps}\n- **Experiments run:** ${inv.experiments.length}\n\nContinue this investigation. Use hypothesis_add, hypothesis_rank, experiment_run, and journal tools to make progress.`;
+      }
+    } catch {
+      // non-fatal: agent starts without investigation context
+    }
+
+    const mlPrompt = `
+
+## ML Agent
+
+You are an ML engineering agent with persistent investigation tracking, leakage prevention, and diagnostic capabilities.
+
+### Workflow
+When the user describes an ML task or competition:
+1. **Create an investigation** (investigation_create) with their goal, dataset, and problem type
+2. **Research first** — use ml_search to find papers, implementations, benchmarks. Use web search tools for competition-specific info
+3. **Form hypotheses** (hypothesis_add) — ranked by expected value
+4. **Run experiments** — leak_preflight runs automatically before each experiment
+5. **Record findings** (finding_record) and update hypotheses (hypothesis_update)
+6. **Diagnose failures** with the diagnose tool when experiments fail
+7. **Query past work** (journal_query, knowledge_search) before trying new approaches
+
+### Key Principles
+- Research before coding. Always search for existing solutions and approaches first
+- Hypothesis-driven: every experiment tests a specific hypothesis
+- Leakage prevention: the system checks for data leakage automatically
+- Use the opinionated stack: polars, LightGBM, PyTorch, HuggingFace, Optuna
+- Record everything: findings, learnings, and decisions go in the journal
+
+### Available Commands
+- /ml-agent — show status, start or resume investigation
+- /ml-loop — start autonomous experiment loop with budget${contextBlock}`;
+
+    return {
+      systemPrompt: event.systemPrompt + mlPrompt,
+    };
+  });
+
   // Existing tools
   registerExperimentTools(pi, getState);
   registerArtifactTools(pi, getState);
