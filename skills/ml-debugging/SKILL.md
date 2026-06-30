@@ -1,4 +1,5 @@
 ---
+name: ml-debugging
 description: Systematic ML debugging — diagnose experiment failures using ML-specific diagnostic trees for common failure patterns, with systematic hypothesis-test-eliminate fallback for novel problems. Use when an experiment fails, produces unexpected results, or metrics don't match expectations.
 ---
 

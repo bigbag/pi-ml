@@ -1,4 +1,5 @@
 ---
+name: ml-pipeline
 description: End-to-end ML pipeline guide covering problem definition through deployment. Use when starting a new ML project, structuring an investigation, or needing stage-specific guidance on data handling, modeling, evaluation, or deployment.
 ---
 

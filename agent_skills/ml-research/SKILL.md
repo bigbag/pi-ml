@@ -1,7 +1,6 @@
 ---
 name: ml-research
 description: Use when analyzing ML competitions/challenges, improving model performance under constraints (size, compute, time), designing experiment plans, researching SOTA techniques, reviewing training logs, or user asks "how can I improve my model/score/metric".
-version: "1.0"
 ---
 
 # ML Research Investigator

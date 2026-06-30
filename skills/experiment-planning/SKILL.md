@@ -1,4 +1,5 @@
 ---
+name: experiment-planning
 description: Run autonomous ML experiment loops — assess task, research techniques, plan ranked experiments with cost estimates, execute with artifact tracking, analyze results, and iterate toward a target metric.
 ---
 

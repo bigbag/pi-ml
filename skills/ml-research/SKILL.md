@@ -1,4 +1,5 @@
 ---
+name: ml-research
 description: Investigate ML research, papers, techniques, competitions, or constrained optimization problems. Use when analyzing challenges, improving model performance under constraints, designing experiment plans, or reviewing training logs.
 ---
 
