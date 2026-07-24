@@ -24,7 +24,7 @@ export function registerCodeTools(pi: ExtensionAPI, getState: (ctx: any) => Sess
       } else {
         content = "Not a git repository. Manual snapshot required.";
       }
-      const tmpPath = path.join(cwd, `.ml-agent/tmp-snapshot-${Date.now()}.diff`);
+      const tmpPath = path.join(cwd, `.cache/ml-agent/tmp/snapshot-${Date.now()}.diff`);
       await fs.mkdir(path.dirname(tmpPath), { recursive: true });
       await fs.writeFile(tmpPath, content);
       const art = await state.artifactRegistry.register(params.experimentId, "code", "snapshot.diff", tmpPath, { source: "code_snapshot" });

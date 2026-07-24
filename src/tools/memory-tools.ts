@@ -2,11 +2,16 @@ import { Type } from "typebox"
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent"
 import type { Journal } from "../memory/journal.js"
 import type { KnowledgeStore } from "../memory/knowledge.js"
+import type { InvestigationManager } from "../investigation/manager.js"
+import { newId } from "../util/ids.js"
+
+const MAX_FINDING_CHARS = 4000
 
 export function registerMemoryTools(
   pi: ExtensionAPI,
   getJournal: (ctx: any) => Journal,
   getKnowledge: (ctx: any) => KnowledgeStore,
+  getManager?: (ctx: any) => InvestigationManager,
 ) {
   pi.registerTool({
     name: "journal_query",
@@ -103,31 +108,50 @@ export function registerMemoryTools(
     label: "Record Finding",
     description: "Record an insight, warning, or decision from an experiment",
     parameters: Type.Object({
-      investigationId: Type.String(),
-      type: Type.Union([
+      investigationId: Type.Optional(Type.String()),
+      type: Type.Optional(Type.Union([
         Type.Literal("insight"),
         Type.Literal("warning"),
         Type.Literal("decision"),
-      ]),
+      ])),
       text: Type.String(),
       sourceExperiments: Type.Optional(Type.Array(Type.String())),
       tags: Type.Optional(Type.Array(Type.String())),
     }),
     async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
       const journal = getJournal(ctx)
-      const id = "fnd-" + Date.now().toString(36)
+      let invId = params.investigationId
+      if (!invId && getManager) {
+        invId = await getManager(ctx).getActiveId()
+      }
+      if (!invId) {
+        throw new Error("No investigationId and no active investigation")
+      }
+
+      let text = params.text
+      let truncated = false
+      if (text.length > MAX_FINDING_CHARS) {
+        text = text.slice(0, MAX_FINDING_CHARS) + "…[truncated]"
+        truncated = true
+      }
+
+      const id = newId("fnd")
+      const type = params.type ?? "insight"
       await journal.recordFinding({
         id,
-        investigationId: params.investigationId,
-        type: params.type,
-        text: params.text,
+        investigationId: invId,
+        type,
+        text,
         sourceExperiments: params.sourceExperiments ?? [],
         tags: params.tags ?? [],
         timestamp: new Date().toISOString(),
       })
       return {
-        content: [{ type: "text", text: `Finding ${id} recorded: [${params.type}] ${params.text}` }],
-        details: { id },
+        content: [{
+          type: "text",
+          text: `Finding ${id} recorded: [${type}] ${text}${truncated ? " (truncated)" : ""}`,
+        }],
+        details: { id, truncated },
       }
     },
   })
@@ -143,7 +167,7 @@ export function registerMemoryTools(
     }),
     async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
       const knowledge = getKnowledge(ctx)
-      const id = "lrn-" + Date.now().toString(36)
+      const id = newId("lrn")
       await knowledge.addLearning({
         id,
         text: params.text,

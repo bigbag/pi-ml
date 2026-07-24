@@ -16,6 +16,8 @@ export async function loadSettings(cwd: string): Promise<MlExtensionSettings> {
   const defaults: MlExtensionSettings = {
     maxExperimentsInLeaderboard: 20,
     defaultArtifactTags: [],
+    requireLeakPreflight: false,
+    postRunHooks: ["remind_stop_pod", "register_outputs"],
   };
 
   let global: MlExtensionSettings = {};

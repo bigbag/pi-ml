@@ -1,6 +1,17 @@
 import type { HypothesisRecord } from "./hypothesis.js"
 import type { ExperimentJournalRecord, FindingRecord } from "./journal.js"
 
+export interface LoopState {
+  budget: number
+  experimentsRun: number
+  roundsSinceImprovement: number
+  targetMetric?: string
+  targetValue?: number
+  targetDirection?: "above" | "below"
+  active: boolean
+  bestMetricValue?: number
+}
+
 export interface InvestigationMetadata {
   id: string
   goal: string
@@ -13,6 +24,7 @@ export interface InvestigationMetadata {
   constraints: string[]
   notes: string[]
   openQuestions: Question[]
+  loop?: LoopState
 }
 
 export interface Question {

@@ -26,7 +26,7 @@ describe("Memory, Leakage & Diagnostics Tools", () => {
     knowledge = new KnowledgeStore(path.join(tmpDir, "knowledge"))
     registeredTools.clear()
     registerMemoryTools(mockPi, () => journal, () => knowledge)
-    registerLeakageTools(mockPi)
+    registerLeakageTools(mockPi, () => ({ lastLeakPreflightAt: undefined } as any))
     registerDiagnosticsTools(mockPi)
   })
 
@@ -71,6 +71,38 @@ describe("Memory, Leakage & Diagnostics Tools", () => {
     expect(result.details.count).toBe(1)
     const parsed = JSON.parse(result.content[0].text)
     expect(parsed[0].text).toBe("Target encoding helps")
+    expect(parsed[0].id.startsWith("fnd-")).toBe(true)
+  })
+
+  it("produces unique finding ids under burst", async () => {
+    const recordTool = registeredTools.get("finding_record")
+    const ids = new Set<string>()
+    for (let i = 0; i < 50; i++) {
+      const r = await recordTool.execute("c", {
+        investigationId: "inv-1",
+        text: `finding ${i}`,
+      }, null, null, {})
+      ids.add(r.details.id)
+    }
+    expect(ids.size).toBe(50)
+  })
+
+  it("defaults finding type to insight", async () => {
+    const recordTool = registeredTools.get("finding_record")
+    const r = await recordTool.execute("c", {
+      investigationId: "inv-1",
+      text: "no type given",
+    }, null, null, {})
+    expect(r.content[0].text).toContain("[insight]")
+  })
+
+  it("diagnoses with mixed non-numeric metrics", async () => {
+    const tool = registeredTools.get("diagnose")
+    const result = await tool.execute("c1", {
+      trainMetrics: { accuracy: 0.99, device: "cpu" },
+      valMetrics: { accuracy: 0.70, range: "3.0-4.0" },
+    }, null, null, {})
+    expect(result.details.failureType).toBe("overfitting")
   })
 
   it("saves and searches learnings", async () => {

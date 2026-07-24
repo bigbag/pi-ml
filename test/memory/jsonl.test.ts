@@ -69,4 +69,30 @@ describe("JsonlStore", () => {
     expect(records).toHaveLength(1)
     expect(records[0].id).toBe("2")
   })
+
+  it("skips corrupt lines on readAll", async () => {
+    const { writeFile } = await import("node:fs/promises")
+    const file = join(dir, "corrupt.jsonl")
+    await writeFile(
+      file,
+      '{"id":"1","name":"a","value":1}\n' +
+        "NOT_JSON\n" +
+        '{"id":"2","name":"b","value":2}\n',
+    )
+    const s = new JsonlStore<TestRecord>(file)
+    const records = await s.readAll()
+    expect(records).toHaveLength(2)
+    expect(records.map((r) => r.id)).toEqual(["1", "2"])
+  })
+
+  it("update is safe under concurrency", async () => {
+    await store.append({ id: "1", name: "a", value: 0 })
+    await Promise.all(
+      Array.from({ length: 20 }, (_, i) =>
+        store.append({ id: String(i + 2), name: "x", value: i }),
+      ),
+    )
+    const all = await store.readAll()
+    expect(all.length).toBe(21)
+  })
 })

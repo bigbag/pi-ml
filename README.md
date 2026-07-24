@@ -44,6 +44,10 @@ pi -e ./src/index.ts
 | `artifact_get` | Retrieve artifact content |
 | `artifact_compare` | Diff two artifacts |
 | `artifact_tag` | Tag artifacts |
+| `submission_check` | Validate competition submission CSV vs sample |
+| `finding_record` / `hypothesis_*` / `investigation_*` | Journal + investigation lifecycle |
+| `leak_preflight` / `leak_check` | Leakage checks (call before runs; optional enforce) |
+| `diagnose` / `analyze_output` | Failure diagnosis |
 
 ## Skills
 
@@ -65,11 +69,15 @@ Invoke with `/skill:ml-research` or `/skill:experiment-planning`.
 
 ## Data Storage
 
-All data is stored in `.ml-agent/` in the project root:
-- `.ml-agent/store/` — Artifact storage
-- `.ml-agent/registry.jsonl` — Artifact registry
-- `.ml-agent/experiments.jsonl` — Experiment metadata
-- `.ml-agent/search-cache/` — Cached search results
+All data is stored in `.cache/ml-agent/` in the project root:
+- `.cache/ml-agent/store/` — Artifact storage
+- `.cache/ml-agent/registry.jsonl` — Artifact registry
+- `.cache/ml-agent/experiments.jsonl` — Experiment metadata
+- `.cache/ml-agent/journal/` — Investigations journal (experiments, hypotheses, findings)
+- `.cache/ml-agent/tmp/` — Ephemeral run logs and tool temps
+- `.cache/ml-agent/search-cache/` — Cached search results
+
+Legacy `.ml-agent/` directories are detected at session start; runtime always uses `.cache/ml-agent/`.
 
 ## Usage Example
 
@@ -98,7 +106,9 @@ Persistent settings in `.pi/pi-ml.json` (project) or `~/.pi/agent/pi-ml.json` (g
 ```json
 {
   "maxExperimentsInLeaderboard": 20,
-  "defaultArtifactTags": ["baseline"]
+  "defaultArtifactTags": ["baseline"],
+  "requireLeakPreflight": false,
+  "postRunHooks": ["remind_stop_pod", "register_outputs"]
 }
 ```
 

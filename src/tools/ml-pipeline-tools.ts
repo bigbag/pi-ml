@@ -22,7 +22,7 @@ export function registerPipelineTools(pi: ExtensionAPI, getState: (ctx: any) => 
       const profile = await profileDataset(params.datasetPath, { targetColumn: params.targetColumn });
 
       const profileJson = JSON.stringify(profile, null, 2);
-      const tmpPath = path.join(ctx.cwd, `.ml-agent/tmp-profile-${Date.now()}.json`);
+      const tmpPath = path.join(ctx.cwd, `.cache/ml-agent/tmp/profile-${Date.now()}.json`);
       let art;
       try {
         await fs.mkdir(path.dirname(tmpPath), { recursive: true });
@@ -153,7 +153,7 @@ export function registerPipelineTools(pi: ExtensionAPI, getState: (ctx: any) => 
         })),
       };
 
-      const tmpPath = path.join(ctx.cwd, `.ml-agent/tmp-folds-${Date.now()}.json`);
+      const tmpPath = path.join(ctx.cwd, `.cache/ml-agent/tmp/folds-${Date.now()}.json`);
       let art;
       try {
         await fs.mkdir(path.dirname(tmpPath), { recursive: true });

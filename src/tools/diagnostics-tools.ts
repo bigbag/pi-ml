@@ -1,7 +1,18 @@
 import { Type } from "typebox"
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent"
-import { classifyFailure, parseTrainingLog, extractEvidence, getTree } from "../diagnostics/index.js"
+import { classifyFailure, parseTrainingLog, getTree } from "../diagnostics/index.js"
 import type { Evidence } from "../diagnostics/index.js"
+
+function coerceMetrics(m?: Record<string, unknown>): Record<string, number> | null {
+  if (!m) return null
+  const out: Record<string, number> = {}
+  for (const [k, v] of Object.entries(m)) {
+    if (typeof v === "number" && Number.isFinite(v)) out[k] = v
+    else if (typeof v === "string" && v.trim() !== "" && !Number.isNaN(Number(v))) out[k] = Number(v)
+    // skip non-numeric keys like "device": "cpu" or ranges "3.0-4.0"
+  }
+  return out
+}
 
 export function registerDiagnosticsTools(pi: ExtensionAPI) {
   pi.registerTool({
@@ -10,17 +21,17 @@ export function registerDiagnosticsTools(pi: ExtensionAPI) {
     description: "Classify experiment failure and walk diagnostic tree or systematic debug",
     promptSnippet: "Diagnose why an experiment failed or produced unexpected results",
     parameters: Type.Object({
-      trainMetrics: Type.Optional(Type.Record(Type.String(), Type.Number())),
-      valMetrics: Type.Optional(Type.Record(Type.String(), Type.Number())),
-      testMetrics: Type.Optional(Type.Record(Type.String(), Type.Number())),
+      trainMetrics: Type.Optional(Type.Record(Type.String(), Type.Unknown())),
+      valMetrics: Type.Optional(Type.Record(Type.String(), Type.Unknown())),
+      testMetrics: Type.Optional(Type.Record(Type.String(), Type.Unknown())),
       lossHistory: Type.Optional(Type.Array(Type.Number())),
       classDistribution: Type.Optional(Type.Record(Type.String(), Type.Number())),
     }),
     async execute(_toolCallId, params, _signal, _onUpdate, _ctx) {
       const evidence: Evidence = {
-        trainMetrics: params.trainMetrics ?? null,
-        valMetrics: params.valMetrics ?? null,
-        testMetrics: params.testMetrics ?? null,
+        trainMetrics: coerceMetrics(params.trainMetrics as Record<string, unknown> | undefined),
+        valMetrics: coerceMetrics(params.valMetrics as Record<string, unknown> | undefined),
+        testMetrics: coerceMetrics(params.testMetrics as Record<string, unknown> | undefined),
         lossHistory: params.lossHistory ?? [],
         classDistribution: params.classDistribution ?? null,
       }
@@ -81,17 +92,14 @@ export function registerDiagnosticsTools(pi: ExtensionAPI) {
         lines.push(`**Val Loss:** ${parsed.valLossHistory[0].toFixed(4)} → ${parsed.valLossHistory[parsed.valLossHistory.length - 1].toFixed(4)}`)
       }
 
-      const metricEntries = Object.entries(parsed.finalMetrics)
-      if (metricEntries.length > 0) {
-        lines.push("**Final Metrics:**")
-        for (const [name, value] of metricEntries) {
-          lines.push(`  ${name}: ${value}`)
-        }
-      }
-
       return {
         content: [{ type: "text", text: lines.join("\n") }],
-        details: parsed,
+        details: {
+          epochs: parsed.epochs,
+          hasNaN: parsed.hasNaN,
+          lossHistory: parsed.lossHistory,
+          valLossHistory: parsed.valLossHistory,
+        },
       }
     },
   })

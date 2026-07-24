@@ -5,7 +5,7 @@ import { generateBriefing } from "../investigation/briefing.js"
 
 export function tryAppendUserMessage(ctx: unknown, msg: string) {
   if (typeof (ctx as any).appendUserMessage === "function") {
-    (ctx as any).appendUserMessage(msg)
+    ;(ctx as any).appendUserMessage(msg)
   }
 }
 
@@ -18,28 +18,43 @@ export function registerMlAgentCommand(
     description: "ML Agent — show status, start or resume investigation",
     handler: async (_args, ctx) => {
       const manager = getManager(ctx)
+      void getJournal
       const investigations = await manager.list()
-      const active = investigations.filter(i => i.status === "active")
-      const paused = investigations.filter(i => i.status === "paused")
+      const active = investigations.filter((i) => i.status === "active")
+      const paused = investigations.filter((i) => i.status === "paused")
+      const stale = manager.listStale(active)
 
       if (active.length > 0) {
         const inv = await manager.load(active[0].id)
-        const briefing = generateBriefing(inv)
+        let briefing = generateBriefing(inv)
+        briefing += `\n\n**Experiments (loaded):** ${inv.experiments.length}`
+        if (inv.loop?.active) {
+          briefing += `\n**Loop:** ${inv.loop.experimentsRun}/${inv.loop.budget} runs` +
+            (inv.loop.targetMetric ? ` target ${inv.loop.targetMetric}=${inv.loop.targetValue}` : "")
+        }
+        if (stale.length > 0) {
+          briefing +=
+            `\n\n⚠️ Stale active investigations (>7d): ` +
+            stale.map((s) => `${s.id} (${s.goal})`).join(", ") +
+            ` — consider investigation_close or pause.`
+        }
         ctx.ui.notify(briefing, "info")
       } else if (paused.length > 0) {
         const list = paused
-          .map(i => `- ${i.id}: ${i.goal} (paused ${i.lastActivity})`)
+          .map((i) => `- ${i.id}: ${i.goal} (paused ${i.lastActivity})`)
           .join("\n")
         ctx.ui.notify(`Paused investigations:\n${list}`, "info")
-        tryAppendUserMessage(ctx,
+        tryAppendUserMessage(
+          ctx,
           `I have ${paused.length} paused investigation(s):\n${list}\n\n` +
-          "Ask me which one to resume, or if I want to start a new one.",
+            "Ask me which one to resume (id or goal substring), or if I want to start a new one.",
         )
       } else {
         ctx.ui.notify("Welcome to ML Agent. Let's start your first investigation.", "info")
-        tryAppendUserMessage(ctx,
+        tryAppendUserMessage(
+          ctx,
           "No investigations exist yet. Ask me what ML problem I want to solve, what dataset I'm working with, " +
-          "and what constraints I have. Then create an investigation with investigation_create and help me form initial hypotheses.",
+            "and what constraints I have. Then create an investigation with investigation_create and help me form initial hypotheses.",
         )
       }
     },

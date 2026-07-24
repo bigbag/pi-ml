@@ -9,6 +9,8 @@ description: End-to-end ML pipeline guide covering problem definition through de
 
 Follow the pipeline stages in order. Each stage has a key question — answer it before moving on. Use `investigation_create` to track the full pipeline as an investigation. Record findings at each stage. Run leakage checks at stages 3, 4, and 5.
 
+For **tabular CSV/parquet**: prefer `dataset_profile` early. For images, audio, graphs, or code-defined loaders: skip profiling and `finding_record` why. Prefer `experiment_run` over raw bash for training.
+
 ## Quick Reference
 
 | Stage | Key Question | Primary Tool |
@@ -17,7 +19,7 @@ Follow the pipeline stages in order. Each stage has a key question — answer it
 | 2. Data Collection | "Is my data representative of production?" | `dataset_profile` |
 | 3. EDA | "Where are the leaks and biases?" | `dataset_profile`, `leak_check` |
 | 4. Feature Engineering | "Will this feature exist at inference time?" | `leak_check` |
-| 5. Train/Val/Test Split | "Is my validation strategy realistic?" | `cv_split`, `leak_preflight` |
+| 5. Train/Val/Test Split | "Is my validation strategy realistic?" | `cv_manager`, `leak_preflight` |
 | 6. Model Selection | "Does this beat a simple baseline?" | `experiment_run` |
 | 7. Tuning | "Am I tuning the right metric?" | `experiment_run` |
 | 8. Evaluation | "Would I bet money on this test result?" | `statistical_test` |
@@ -152,7 +154,7 @@ df = df.with_columns([
   - Random/stratified for i.i.d. tabular data
   - Time-based for temporal data
   - Group-based when entities span multiple rows
-- [ ] Generate splits: `cv_split`
+- [ ] Generate splits: `cv_manager`
 - [ ] **LEAKAGE PREFLIGHT**: `leak_preflight` — validates split strategy against data structure
 - [ ] Verify holdout test set is truly held out — never touch until final evaluation
 

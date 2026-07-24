@@ -7,8 +7,12 @@ import {
   generateTemporalCheck,
   generateCorrelationCheck,
 } from "../leakage/index.js"
+import type { SessionState } from "../types/settings.js"
 
-export function registerLeakageTools(pi: ExtensionAPI) {
+export function registerLeakageTools(
+  pi: ExtensionAPI,
+  getState?: (ctx: any) => SessionState,
+) {
   pi.registerTool({
     name: "leak_check",
     label: "Leakage Check",
@@ -67,7 +71,7 @@ export function registerLeakageTools(pi: ExtensionAPI) {
       usesCV: Type.Optional(Type.Boolean({ default: false })),
       checksGroupLeakage: Type.Optional(Type.Boolean({ default: false })),
     }),
-    async execute(_toolCallId, params, _signal, _onUpdate, _ctx) {
+    async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
       const profile = {
         columns: [],
         hasTimestampColumn: params.hasTimestamp ?? false,
@@ -83,10 +87,24 @@ export function registerLeakageTools(pi: ExtensionAPI) {
       const result = runPreflight(profile, config)
       const report = formatPreflightReport(result)
 
+      if (getState) {
+        try {
+          const state = getState(ctx)
+          state.lastLeakPreflightAt = Date.now()
+        } catch {
+          // ignore
+        }
+      }
+
       return {
         content: [{ type: "text", text: report }],
         details: { passed: result.passed, blockers: result.blockers.length, warnings: result.warnings.length },
       }
     },
   })
+}
+
+/** Helper for runner gate / tests */
+export function markLeakPreflight(state: SessionState): void {
+  state.lastLeakPreflightAt = Date.now()
 }

@@ -66,6 +66,29 @@ describe("InvestigationManager", () => {
     expect(inv.experiments).toHaveLength(1)
   })
 
+  it("merges ExperimentStore into load", async () => {
+    const { ExperimentStore } = await import("../../src/store/experiment-store.js")
+    const store = new ExperimentStore(join(dir, "experiments.jsonl"))
+    manager = new InvestigationManager(join(dir, "investigations"), journal, store)
+    const id = await manager.create("Goal store", "d.csv", "regression")
+    await store.create({
+      id: "exp-store",
+      name: "from-store",
+      investigationId: id,
+      status: "completed",
+      results: { auc: 0.9 },
+    })
+    const inv = await manager.load(id)
+    expect(inv.experiments.some((e) => e.id === "exp-store")).toBe(true)
+    expect(inv.experiments.find((e) => e.id === "exp-store")!.metrics.auc).toBe(0.9)
+  })
+
+  it("findByIdOrGoal matches goal substring", async () => {
+    const id = await manager.create("Predict house prices in Austin", "h.csv", "regression")
+    const hit = await manager.findByIdOrGoal("house prices")
+    expect(hit?.id).toBe(id)
+  })
+
   it("lists all investigations", async () => {
     await manager.create("Goal A", "a.csv", "regression")
     await manager.create("Goal B", "b.csv", "classification")

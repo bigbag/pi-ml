@@ -1,11 +1,14 @@
 export interface RunConfig {
   experimentId: string;
-  codeArtifactId: string;
-  configArtifactId: string;
+  codeArtifactId?: string;
+  configArtifactId?: string;
   command: string;
   workingDir: string;
   timeoutSeconds: number;
   outputPatterns: string[];
+  /** Optional path to tee stdout/stderr while the process runs. */
+  logPath?: string;
+  env?: NodeJS.ProcessEnv;
 }
 
 export interface RunResult {
@@ -14,6 +17,7 @@ export interface RunResult {
   stdout: string;
   stderr: string;
   outputFiles: string[];
+  logPath?: string;
 }
 
 export interface RunStatus {

@@ -36,9 +36,22 @@ export class Journal {
     await this.experiments.append(record)
   }
 
+  /**
+   * Upsert experiment journal row by id so investigation.load stays in sync
+   * with ExperimentStore without N snapshot rows.
+   */
+  async upsertExperiment(id: string, record: ExperimentJournalRecord): Promise<void> {
+    const existing = await this.experiments.find((r) => r.id === id)
+    if (existing) {
+      await this.experiments.update((r) => r.id === id, record)
+    } else {
+      await this.experiments.append(record)
+    }
+  }
+
   async getExperiments(filter?: ExperimentFilter): Promise<ExperimentJournalRecord[]> {
     if (!filter) return this.experiments.readAll()
-    return this.experiments.filter(r => {
+    return this.experiments.filter((r) => {
       if (filter.investigationId && r.investigationId !== filter.investigationId) return false
       if (filter.hypothesisId && r.hypothesisId !== filter.hypothesisId) return false
       if (filter.model && r.config.model !== filter.model) return false
@@ -53,7 +66,7 @@ export class Journal {
     limit: number,
   ): Promise<ExperimentJournalRecord[]> {
     const all = await this.experiments.readAll()
-    const withMetric = all.filter(r => metric in r.metrics)
+    const withMetric = all.filter((r) => metric in r.metrics)
     withMetric.sort((a, b) => {
       const diff = (a.metrics[metric] ?? 0) - (b.metrics[metric] ?? 0)
       return direction === "asc" ? diff : -diff
@@ -67,7 +80,7 @@ export class Journal {
 
   async getHypotheses(filter?: HypothesisFilter): Promise<HypothesisRecord[]> {
     if (!filter) return this.hypotheses.readAll()
-    return this.hypotheses.filter(r => {
+    return this.hypotheses.filter((r) => {
       if (filter.investigationId && r.investigationId !== filter.investigationId) return false
       if (filter.status && r.status !== filter.status) return false
       return true
@@ -75,7 +88,19 @@ export class Journal {
   }
 
   async updateHypothesis(id: string, patch: Partial<HypothesisRecord>): Promise<void> {
-    await this.hypotheses.update(r => r.id === id, patch)
+    await this.hypotheses.update((r) => r.id === id, patch)
+  }
+
+  async linkExperimentToHypothesis(hypothesisId: string, experimentId: string): Promise<void> {
+    const hyp = await this.hypotheses.find((r) => r.id === hypothesisId)
+    if (!hyp) return
+    const experiments = hyp.experiments.includes(experimentId)
+      ? hyp.experiments
+      : [...hyp.experiments, experimentId]
+    await this.hypotheses.update((r) => r.id === hypothesisId, {
+      experiments,
+      status: hyp.status === "pending" ? "testing" : hyp.status,
+    })
   }
 
   async recordFinding(record: FindingRecord): Promise<void> {
@@ -84,10 +109,10 @@ export class Journal {
 
   async getFindings(filter?: FindingFilter): Promise<FindingRecord[]> {
     if (!filter) return this.findings.readAll()
-    return this.findings.filter(r => {
+    return this.findings.filter((r) => {
       if (filter.investigationId && r.investigationId !== filter.investigationId) return false
       if (filter.type && r.type !== filter.type) return false
-      if (filter.tags && !filter.tags.some(t => r.tags.includes(t))) return false
+      if (filter.tags && !filter.tags.some((t) => r.tags.includes(t))) return false
       return true
     })
   }

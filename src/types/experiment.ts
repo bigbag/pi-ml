@@ -18,4 +18,8 @@ export interface ExperimentRecord {
   derivedExperimentIds: string[];
   hyperparameters?: Record<string, unknown>;
   results?: Record<string, unknown>;
+  /** Links experiment to active investigation for load/status. */
+  investigationId?: string;
+  /** Links experiment to a hypothesis lineage. */
+  hypothesisId?: string;
 }

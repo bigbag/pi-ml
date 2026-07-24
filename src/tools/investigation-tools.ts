@@ -39,12 +39,19 @@ export function registerInvestigationTools(
     }),
     async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
       const manager = getManager(ctx)
-      await manager.resume(params.id)
-      const inv = await manager.load(params.id)
+      const hit = await manager.findByIdOrGoal(params.id)
+      if (!hit) {
+        const all = await manager.list()
+        throw new Error(
+          `Investigation not found: ${params.id}. Known: ${all.map((i) => i.id).join(", ") || "(none)"}`,
+        )
+      }
+      await manager.resume(hit.id)
+      const inv = await manager.load(hit.id)
       const briefing = generateBriefing(inv)
       return {
         content: [{ type: "text", text: briefing }],
-        details: { id: params.id, status: inv.status },
+        details: { id: hit.id, status: inv.status },
       }
     },
   })
