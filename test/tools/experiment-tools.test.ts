@@ -181,4 +181,54 @@ describe("Experiment Tools Integration", () => {
     expect(exp).toBeDefined();
     expect(exp!.status).toBe("completed");
   });
+
+  it("experiment_run backfills investigationId and keeps aborted status", async () => {
+    const invId = await manager.create("g", "d.csv", "reg");
+    await state.experimentStore.create({ id: "legacy", name: "legacy", status: "planned" });
+    // no investigationId on purpose
+    const tool = registeredTools.get("experiment_run");
+    const ac = new AbortController();
+    // Abort after scheduling by wrapping runner
+    const orig = state.runner.run.bind(state.runner);
+    state.runner.run = async (cfg) => {
+      ac.abort();
+      const r = await orig(cfg);
+      return r;
+    };
+    await expect(
+      tool.execute("c1", {
+        experimentId: "legacy",
+        command: "echo x",
+        workingDir: tmpDir,
+        timeoutSeconds: 30,
+        outputPatterns: [],
+      }, ac.signal, null, { cwd: tmpDir }),
+    ).rejects.toThrow(/aborted/i);
+
+    const exp = await state.experimentStore.get("legacy");
+    expect(exp!.investigationId).toBe(invId);
+    expect(exp!.status).toBe("aborted");
+  });
+
+  it("re-run refreshes completedAt", async () => {
+    const tool = registeredTools.get("experiment_run");
+    await tool.execute("c1", {
+      experimentId: "rerun",
+      command: "echo 1",
+      workingDir: tmpDir,
+      timeoutSeconds: 30,
+      outputPatterns: [],
+    }, null, null, { cwd: tmpDir });
+    const first = await state.experimentStore.get("rerun");
+    await new Promise((r) => setTimeout(r, 5));
+    await tool.execute("c2", {
+      experimentId: "rerun",
+      command: "echo 2",
+      workingDir: tmpDir,
+      timeoutSeconds: 30,
+      outputPatterns: [],
+    }, null, null, { cwd: tmpDir });
+    const second = await state.experimentStore.get("rerun");
+    expect(second!.completedAt).toBeGreaterThan(first!.completedAt!);
+  });
 });

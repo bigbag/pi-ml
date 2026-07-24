@@ -96,6 +96,22 @@ describe("InvestigationManager", () => {
     expect(list).toHaveLength(2)
   })
 
+  it("create pauses prior active investigations", async () => {
+    const a = await manager.create("Goal A", "a.csv", "regression")
+    const b = await manager.create("Goal B", "b.csv", "classification")
+    expect((await manager.load(a)).status).toBe("paused")
+    expect((await manager.load(b)).status).toBe("active")
+    expect(await manager.getActiveId()).toBe(b)
+  })
+
+  it("resume pauses other actives", async () => {
+    const a = await manager.create("Goal A", "a.csv", "regression")
+    const b = await manager.create("Goal B", "b.csv", "classification")
+    await manager.resume(a)
+    expect((await manager.load(a)).status).toBe("active")
+    expect((await manager.load(b)).status).toBe("paused")
+  })
+
   it("pauses an investigation", async () => {
     const id = await manager.create("Goal", "d.csv", "regression")
     await manager.pause(id)

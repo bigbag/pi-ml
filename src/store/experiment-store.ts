@@ -112,13 +112,12 @@ export class ExperimentStore {
       const idx = all.findIndex((r) => r.id === id);
       if (idx === -1) throw new Error(`Experiment not found: ${id}`);
       all[idx].status = status;
-      if (status === "running" && !all[idx].startedAt) {
+      if (status === "running") {
         all[idx].startedAt = Date.now();
+        // Clear prior completion so re-runs get a fresh completedAt.
+        delete all[idx].completedAt;
       }
-      if (
-        (status === "completed" || status === "failed" || status === "aborted") &&
-        !all[idx].completedAt
-      ) {
+      if (status === "completed" || status === "failed" || status === "aborted") {
         all[idx].completedAt = Date.now();
       }
       await this.rewriteUnlocked(all);

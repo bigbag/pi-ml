@@ -95,4 +95,14 @@ describe("JsonlStore", () => {
     const all = await store.readAll()
     expect(all.length).toBe(21)
   })
+
+  it("upsertById is atomic under concurrency", async () => {
+    await Promise.all(
+      Array.from({ length: 30 }, (_, i) =>
+        store.upsertById("same", { id: "same", name: "n", value: i }, (r) => r.id),
+      ),
+    )
+    const all = await store.readAll()
+    expect(all.filter((r) => r.id === "same")).toHaveLength(1)
+  })
 })

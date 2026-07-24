@@ -1,6 +1,7 @@
 import { spawn } from "node:child_process";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
+import { createWriteStream, type WriteStream } from "node:fs";
 import { glob } from "glob";
 import type { ExperimentRunner, RunConfig, RunResult, RunStatus } from "../types/runner.js";
 import { newId } from "../util/ids.js";
@@ -18,15 +19,19 @@ export class LocalRunner implements ExperimentRunner {
 
   async run(config: RunConfig): Promise<RunResult> {
     const runId = newId("run");
-    const shell = process.env.SHELL || "/bin/bash";
+    // Prefer non-login bash: login shells can source slow/broken profiles.
+    const shell = process.env.SHELL && process.env.SHELL.includes("zsh")
+      ? "/bin/bash"
+      : (process.env.SHELL || "/bin/bash");
 
+    let logStream: WriteStream | undefined;
     if (config.logPath) {
       await fs.mkdir(path.dirname(config.logPath), { recursive: true });
-      await fs.writeFile(config.logPath, "");
+      logStream = createWriteStream(config.logPath, { flags: "w" });
     }
 
     return new Promise((resolve, reject) => {
-      const child = spawn(shell, ["-lc", config.command], {
+      const child = spawn(shell, ["-c", config.command], {
         cwd: config.workingDir,
         env: { ...process.env, ...config.env },
       });
@@ -47,31 +52,34 @@ export class LocalRunner implements ExperimentRunner {
         }, 5_000).unref?.();
       }, timeoutMs);
 
-      const tee = async (stream: "stdout" | "stderr", chunk: string) => {
-        if (stream === "stdout") stdout = appendCapped(stdout, chunk);
-        else stderr = appendCapped(stderr, chunk);
-        if (config.logPath) {
-          try {
-            await fs.appendFile(config.logPath, chunk);
-          } catch {
-            // best-effort log tee
-          }
+      const onChunk = (stream: "stdout" | "stderr", chunk: Buffer) => {
+        const text = chunk.toString("utf-8");
+        // Keep memory buffer updates synchronous to avoid race on await.
+        if (stream === "stdout") stdout = appendCapped(stdout, text);
+        else stderr = appendCapped(stderr, text);
+        if (logStream && !logStream.destroyed) {
+          logStream.write(text);
         }
       };
 
-      child.stdout?.on("data", (data: Buffer) => {
-        void tee("stdout", data.toString("utf-8"));
-      });
+      child.stdout?.on("data", (data: Buffer) => onChunk("stdout", data));
+      child.stderr?.on("data", (data: Buffer) => onChunk("stderr", data));
 
-      child.stderr?.on("data", (data: Buffer) => {
-        void tee("stderr", data.toString("utf-8"));
-      });
-
-      child.on("close", async (exitCode) => {
+      const finish = async (exitCode: number | null, err?: Error) => {
         if (settled) return;
         settled = true;
         clearTimeout(timer);
         this.activeRuns.delete(runId);
+
+        await new Promise<void>((res) => {
+          if (!logStream) return res();
+          logStream.end(() => res());
+        });
+
+        if (err) {
+          reject(err);
+          return;
+        }
 
         const outputFiles: string[] = [];
         for (const pattern of config.outputPatterns) {
@@ -83,26 +91,29 @@ export class LocalRunner implements ExperimentRunner {
           }
         }
 
-        if (timedOut && exitCode === null) {
-          stderr = appendCapped(stderr, `\n[local-runner] timed out after ${config.timeoutSeconds}s\n`);
+        if (timedOut) {
+          stderr = appendCapped(
+            stderr,
+            `\n[local-runner] timed out after ${config.timeoutSeconds}s\n`,
+          );
         }
 
         resolve({
           runId,
-          exitCode: timedOut && exitCode === null ? 124 : exitCode,
+          exitCode: timedOut ? 124 : exitCode,
           stdout,
           stderr,
           outputFiles,
           logPath: config.logPath,
         });
+      };
+
+      child.on("close", (exitCode) => {
+        void finish(exitCode);
       });
 
       child.on("error", (err) => {
-        if (settled) return;
-        settled = true;
-        clearTimeout(timer);
-        this.activeRuns.delete(runId);
-        reject(err);
+        void finish(null, err);
       });
     });
   }

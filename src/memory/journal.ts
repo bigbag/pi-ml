@@ -41,12 +41,7 @@ export class Journal {
    * with ExperimentStore without N snapshot rows.
    */
   async upsertExperiment(id: string, record: ExperimentJournalRecord): Promise<void> {
-    const existing = await this.experiments.find((r) => r.id === id)
-    if (existing) {
-      await this.experiments.update((r) => r.id === id, record)
-    } else {
-      await this.experiments.append(record)
-    }
+    await this.experiments.upsertById(id, record, (r) => r.id)
   }
 
   async getExperiments(filter?: ExperimentFilter): Promise<ExperimentJournalRecord[]> {

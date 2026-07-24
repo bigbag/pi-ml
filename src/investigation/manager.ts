@@ -36,6 +36,17 @@ export class InvestigationManager {
   ): Promise<string> {
     const now = new Date().toISOString()
     const id = "inv-" + createHash("sha256").update(goal + now).digest("hex").slice(0, 8)
+
+    // Only one active investigation at a time — pause others to avoid resume noise.
+    const existing = await this.list()
+    for (const inv of existing.filter((i) => i.status === "active")) {
+      await this.store.update((r) => r.id === inv.id, {
+        status: "paused",
+        lastActivity: now,
+        notes: [...(inv.notes ?? []), `auto-paused when creating ${id}`],
+      } as Partial<InvestigationMetadata>)
+    }
+
     const metadata: InvestigationMetadata = {
       id,
       goal,
@@ -108,16 +119,22 @@ export class InvestigationManager {
     for (const e of journalExps) byId.set(e.id, e)
 
     if (this.experimentStore) {
-      const storeExps = await this.experimentStore.list({ investigationId: id })
-      // Also include unscoped store exps that appear in journal for this inv
-      const allStore = storeExps.length
-        ? storeExps
-        : (await this.experimentStore.list()).filter((e) => byId.has(e.id) || e.investigationId === id)
+      const all = await this.experimentStore.list()
+      // Prefer investigationId match; also pull store rows already linked via journal ids
+      // (covers legacy rows missing investigationId).
+      const relevant = all.filter(
+        (e) => e.investigationId === id || byId.has(e.id),
+      )
 
-      for (const e of allStore) {
+      for (const e of relevant) {
         const mapped = this.storeToJournal(id, e)
         const prev = byId.get(e.id)
-        byId.set(e.id, prev ? { ...prev, ...mapped, metrics: { ...prev.metrics, ...mapped.metrics } } : mapped)
+        byId.set(
+          e.id,
+          prev
+            ? { ...prev, ...mapped, metrics: { ...prev.metrics, ...mapped.metrics } }
+            : mapped,
+        )
       }
     }
 
@@ -166,9 +183,18 @@ export class InvestigationManager {
         `Investigation not found: ${id}. Known: ${all.map((i) => i.id).join(", ") || "(none)"}`,
       )
     }
+    const now = new Date().toISOString()
+    // Enforce single active investigation.
+    const all = await this.list()
+    for (const inv of all.filter((i) => i.status === "active" && i.id !== hit.id)) {
+      await this.store.update((r) => r.id === inv.id, {
+        status: "paused",
+        lastActivity: now,
+      } as Partial<InvestigationMetadata>)
+    }
     await this.store.update((r) => r.id === hit.id, {
       status: "active",
-      lastActivity: new Date().toISOString(),
+      lastActivity: now,
     } as Partial<InvestigationMetadata>)
   }
 

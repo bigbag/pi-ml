@@ -279,14 +279,9 @@ When the user describes an ML task or competition:
   registerMlLoopCommand(pi, (ctx) => getModules(ctx).manager);
 
   pi.on("session_shutdown", async (_event, ctx) => {
-    try {
-      const modules = getModules(ctx);
-      await modules.manager.pauseAllActive(
-        `auto-paused on session_shutdown ${new Date().toISOString()}`,
-      );
-    } catch {
-      // ignore
-    }
+    // Do NOT auto-pause active investigations here — they must survive across
+    // sessions so before_agent_start can reinject context. Stale actives are
+    // surfaced in /ml-agent status instead.
     const sessionId = ctx.sessionManager.getSessionId();
     sessions.delete(sessionId);
   });

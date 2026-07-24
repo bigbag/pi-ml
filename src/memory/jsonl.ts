@@ -17,21 +17,7 @@ export class JsonlStore<T extends object> {
   }
 
   async readAll(): Promise<T[]> {
-    try {
-      const content = await readFile(this.filePath, "utf-8")
-      const records: T[] = []
-      for (const line of content.split("\n")) {
-        if (!line.trim()) continue
-        try {
-          records.push(JSON.parse(line) as T)
-        } catch {
-          // skip corrupt lines
-        }
-      }
-      return records
-    } catch {
-      return []
-    }
+    return this.readAllUnlocked()
   }
 
   async find(predicate: (r: T) => boolean): Promise<T | undefined> {
@@ -50,13 +36,29 @@ export class JsonlStore<T extends object> {
   ): Promise<void> {
     await withFileLock(this.lockPath(), async () => {
       const records = await this.readAllUnlocked()
-      const updated = records.map((r) => {
-        if (!predicate(r)) return r
-        // Full record replace when patch looks complete (has same keys + more),
-        // otherwise shallow merge.
-        return { ...r, ...patch }
-      })
+      const updated = records.map((r) => (predicate(r) ? { ...r, ...patch } : r))
       await this.writeAllUnlocked(updated)
+    })
+  }
+
+  /**
+   * Atomic upsert by id key. Avoids TOCTOU duplicate rows from
+   * find-then-append races under parallel tool calls.
+   */
+  async upsertById(
+    id: string,
+    record: T,
+    idOf: (r: T) => string = (r) => (r as { id?: string }).id ?? "",
+  ): Promise<void> {
+    await withFileLock(this.lockPath(), async () => {
+      const records = await this.readAllUnlocked()
+      const idx = records.findIndex((r) => idOf(r) === id)
+      if (idx >= 0) {
+        records[idx] = { ...records[idx], ...record }
+      } else {
+        records.push(record)
+      }
+      await this.writeAllUnlocked(records)
     })
   }
 
@@ -73,7 +75,6 @@ export class JsonlStore<T extends object> {
     })
   }
 
-  /** Unlocked read — caller must hold lock for RMW. */
   private async readAllUnlocked(): Promise<T[]> {
     try {
       const content = await readFile(this.filePath, "utf-8")

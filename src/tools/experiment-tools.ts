@@ -223,17 +223,23 @@ export function registerExperimentTools(
       }
 
       const activeId = await manager.getActiveId();
-      const exp = await state.experimentStore.getOrCreate(params.experimentId, {
+      let exp = await state.experimentStore.getOrCreate(params.experimentId, {
         name: params.experimentId,
         status: "planned",
         investigationId: activeId,
       });
+      // Backfill investigationId on legacy rows so load/status stay linked.
+      if (activeId && !exp.investigationId) {
+        await state.experimentStore.update(params.experimentId, { investigationId: activeId });
+        exp = { ...exp, investigationId: activeId };
+      }
       await state.experimentStore.updateStatus(params.experimentId, "running");
-      await syncJournalExperiment(journal, manager, { ...exp, status: "running" }, activeId);
+      await syncJournalExperiment(journal, manager, { ...exp, status: "running" }, activeId ?? exp.investigationId);
 
       const cacheTmp = path.join(ctx.cwd ?? params.workingDir, ".cache", "ml-agent", "tmp");
       await fs.mkdir(cacheTmp, { recursive: true });
-      const logPath = path.join(cacheTmp, `run-${params.experimentId}-${Date.now()}.log`);
+      const safeId = params.experimentId.replace(/[^a-zA-Z0-9._-]/g, "_");
+      const logPath = path.join(cacheTmp, `run-${safeId}-${Date.now()}.log`);
 
       try {
         const result = await state.runner.run({
@@ -249,7 +255,13 @@ export function registerExperimentTools(
 
         if (signal?.aborted) {
           await state.experimentStore.updateStatus(params.experimentId, "aborted");
-          throw new Error("Experiment aborted");
+          const aborted = await state.experimentStore.get(params.experimentId);
+          if (aborted) {
+            await syncJournalExperiment(journal, manager, aborted, activeId ?? exp.investigationId);
+          }
+          const abortErr = new Error("Experiment aborted");
+          (abortErr as Error & { code?: string }).code = "EXPERIMENT_ABORTED";
+          throw abortErr;
         }
 
         let logRegistered = false;
@@ -296,10 +308,13 @@ export function registerExperimentTools(
         const runStatus = result.exitCode === 0 ? "completed" : "failed";
         await state.experimentStore.updateStatus(params.experimentId, runStatus);
         const updated = await state.experimentStore.get(params.experimentId);
-        if (updated) await syncJournalExperiment(journal, manager, updated, activeId);
+        if (updated) {
+          await syncJournalExperiment(journal, manager, updated, activeId ?? exp.investigationId);
+        }
 
-        if (activeId) {
-          await incrementLoopOnRun(manager, activeId);
+        const loopInv = activeId ?? exp.investigationId;
+        if (loopInv) {
+          await incrementLoopOnRun(manager, loopInv);
         }
 
         const remindStopPod =
@@ -327,7 +342,20 @@ export function registerExperimentTools(
           },
         };
       } catch (err) {
-        await state.experimentStore.updateStatus(params.experimentId, "failed").catch(() => {});
+        const code = (err as { code?: string })?.code;
+        // Don't overwrite explicit aborted status.
+        if (code !== "EXPERIMENT_ABORTED") {
+          await state.experimentStore.updateStatus(params.experimentId, "failed").catch(() => {});
+          const failed = await state.experimentStore.get(params.experimentId).catch(() => undefined);
+          if (failed) {
+            await syncJournalExperiment(
+              journal,
+              manager,
+              failed,
+              activeId ?? exp.investigationId,
+            ).catch(() => {});
+          }
+        }
         throw err;
       }
     },
